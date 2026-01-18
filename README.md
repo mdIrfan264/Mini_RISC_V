@@ -1,93 +1,224 @@
-## 🧠 What Is a Single-Core RISC-V Processor?
+# 🧠 Mini RISC-V Processor (RV32I – Single Cycle)
 
-It is a **minimal processor** that supports the **RISC-V instruction set architecture (ISA)**, and can execute basic operations like:
+## 📌 Project Overview
 
-* Arithmetic (e.g., `add`, `sub`)
-* Logic (`and`, `or`)
-* Memory access (`lw`, `sw`)
-* Control flow (`beq`, `jal`)
+This project implements a **Mini RISC-V (RV32I) single-cycle processor** using **Verilog HDL**.
+The design follows the standard **Fetch → Decode → Execute → Memory → Writeback** datapath and supports a subset of the RISC-V instruction set.
 
-Since it’s **single-core and single-cycle**, it:
-
-* Has **only one processing unit** (no multi-core).
-* Completes **one full instruction per clock cycle**.
+The goal of this project is to **understand processor architecture**, datapath design, and control logic by building a working CPU from scratch.
 
 ---
 
-## 🔩 Key Components (Hardware Modules)
+## 🏗️ Architecture Summary
 
-### 1. **Program Counter (PC)**
-
-* Keeps track of which instruction to execute.
-* Increments by 4 each cycle (since each instruction is 4 bytes).
-
-### 2. **Instruction Memory**
-
-* Stores machine instructions.
-* Delivers current instruction based on PC.
-
-### 3. **Control Unit**
-
-* Decodes the instruction.
-* Generates control signals to direct other blocks (e.g., ALU, memory).
-
-### 4. **Register File**
-
-* 32 general-purpose registers (x0 to x31).
-* Can read 2 registers and write to 1 in each cycle.
-
-### 5. **Immediate Generator**
-
-* Extracts and sign-extends immediate values from instructions.
-
-### 6. **ALU (Arithmetic Logic Unit)**
-
-* Performs arithmetic/logic operations (`add`, `sub`, etc.).
-* Outputs result to be written back to the register.
-
-### 7. **Data Memory**
-
-* Accessed during load (`lw`) and store (`sw`) instructions.
-* Read/write controlled by control unit.
-
-### 8. **Writeback Path**
-
-* Selects whether ALU result or memory data goes back to the register.
+* **ISA**: RISC-V RV32I (subset)
+* **Design style**: Single-cycle CPU
+* **Word size**: 32-bit
+* **Memory model**: Word-addressed
+* **Implementation language**: Verilog HDL
 
 ---
 
-## 🕹️ Single-Cycle Execution Flow
+## 🧩 Supported Instructions
 
-In a single clock cycle, the processor does:
+### ✅ R-Type Instructions
 
-```text
-Fetch ➝ Decode ➝ Execute ➝ Memory ➝ Writeback
+* `add`
+* `sub`
+* `and`
+* `or`
+
+### ✅ I-Type Instructions
+
+* `lw`
+* `addi` *(optional / extendable)*
+
+### ✅ S-Type Instructions
+
+* `sw`
+
+### ✅ B-Type Instructions
+
+* `beq`
+
+> ⚠️ Instructions like `jal`, `lui`, `jalr` can be added as extensions.
+
+---
+
+## 🧱 Processor Blocks
+
+### 1️⃣ Program Counter (PC)
+
+* Holds the current instruction address
+* Updated every clock cycle
+* Supports:
+
+  * `PC + 4`
+  * `PC + immediate` (branch)
+
+---
+
+### 2️⃣ Instruction Memory
+
+* Stores program instructions
+* Word-aligned (`PC[31:2]`)
+* Instruction width: 32-bit
+
+---
+
+### 3️⃣ Control Unit
+
+* Decodes the **opcode (instruction[6:0])**
+* Generates control signals:
+
+  * `RegWrite`
+  * `MemRead`
+  * `MemWrite`
+  * `MemToReg`
+  * `ALUSrc`
+  * `Branch`
+  * `ALUOp`
+
+---
+
+### 4️⃣ Register File
+
+* 32 general-purpose registers (`x0–x31`)
+* Two read ports (`rs1`, `rs2`)
+* One write port (`rd`)
+* `x0` is always zero
+
+---
+
+### 5️⃣ Immediate Generator
+
+* Extracts immediate values from instructions
+* Rearranges and sign-extends them to 32 bits
+* Supports:
+
+  * I-type
+  * S-type
+  * B-type immediates
+
+---
+
+### 6️⃣ ALU Control
+
+* Uses:
+
+  * `ALUOp`
+  * `funct3`
+  * `funct7`
+* Generates exact ALU operation control signals
+
+---
+
+### 7️⃣ ALU
+
+* Performs arithmetic and logic operations
+* Supports:
+
+  * Add
+  * Subtract
+  * AND
+  * OR
+* Generates `Zero` flag for branch decisions
+
+---
+
+### 8️⃣ Data Memory
+
+* Used for `lw` and `sw`
+* Address calculated by ALU
+* Word-aligned access
+
+---
+
+## 🔄 Instruction Flow (Single Cycle)
+
+```
+PC
+ ↓
+Instruction Memory
+ ↓
+Decode (Control + Register File + Immediate Generator)
+ ↓
+Execute (ALU)
+ ↓
+Memory Access
+ ↓
+Write Back
 ```
 
-All **within one clock pulse**.
-
-> Example: `add x1, x2, x3`
-> → Reads x2 & x3 → adds them → stores result in x1
-> → All done in 1 cycle.
+Each instruction completes **in one clock cycle**.
 
 ---
 
-## 📦 Optional Modules (for completeness)
+## 🧪 Simulation
 
-* **Branch Unit**: For handling instructions like `beq`, `jal`, `jalr`
-* **MUXes**: For choosing between sources (e.g., immediate vs register)
-* **Sign Extender**: For 12/20-bit immediate values
+* Instruction memory can be initialized using:
 
----
+  ```verilog
+  $readmemh("program.hex", mem);
+  ```
+* `$display` statements are used for debugging in simulation
+* Testbench drives:
 
-## ✅ Benefits of This Design for You
-
-| Feature             | Why It Matters                                        |
-| ------------------- | ----------------------------------------------------- |
-| Simplicity          | Easy to design and simulate as a student project      |
-| Real Verilog Coding | Helps you learn RTL (Register Transfer Level) design  |
-| ML Data Source      | Will generate logs for your AI-based clock gating     |
-| Industry-Relevant   | RISC‑V is becoming widely adopted in academia & chips |
+  * Clock
+  * Reset
 
 ---
 
+## 📁 Project Structure (Recommended)
+
+```
+Mini_RISC_V/
+├── src/
+│   ├── pc.v
+│   ├── instruction_memory.v
+│   ├── control_unit.v
+│   ├── register_file.v
+│   ├── immediate_generator.v
+│   ├── alu_control.v
+│   ├── alu.v
+│   ├── data_memory.v
+│   └── riscv_cpu.v
+├── tb/
+│   └── tb_riscv_cpu.v
+├── program.hex
+├── README.md
+```
+
+---
+
+## 🚀 Future Enhancements
+
+* Add `jal`, `jalr`, `lui`
+* Pipeline implementation
+* Hazard detection & forwarding
+* CSR support
+* UART / LED debugging output on FPGA
+
+---
+
+## 📚 Learning Outcomes
+
+* Understanding RISC-V instruction formats
+* Datapath and control unit design
+* Immediate generation and sign extension
+* ALU control logic
+* Memory addressing and alignment
+* FPGA synthesis considerations
+
+---
+
+## 👤 Author
+
+**MD Irfan**
+Mini Project – RISC-V Processor Design
+
+---
+
+## 📜 License
+
+This project is for **educational purposes**.
